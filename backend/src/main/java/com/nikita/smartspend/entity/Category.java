@@ -13,5 +13,6 @@ public enum Category {
     TRAVEL,
     SAVINGS,
     INCOME,
+    EMI,
     OTHER
 }

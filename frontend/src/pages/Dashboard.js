@@ -131,7 +131,7 @@ export default function Dashboard() {
 
   // Compute stats from filtered month transactions (client-side)
   const { income, expense, savings, savingsRate } = computeStats(txList);
-  const anomalyCount = txList.filter(tx => tx.anomaly).length;
+  const anomalyCount = txList.filter(tx => tx.isAnomaly).length;
   const overBudget = budgetStatus.filter(b => b.overBudget).length;
 
   // Category breakdown for selected month expenses only
@@ -236,22 +236,22 @@ export default function Dashboard() {
                 <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gIncome" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--green)" stopOpacity={0.3} />
+                      <stop offset="5%"  stopColor="var(--green)" stopOpacity={0.3} />
                       <stop offset="95%" stopColor="var(--green)" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="gExpense" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--red)" stopOpacity={0.3} />
+                      <stop offset="5%"  stopColor="var(--red)" stopOpacity={0.3} />
                       <stop offset="95%" stopColor="var(--red)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
                   <XAxis dataKey="label" tick={{ fill: 'var(--text3)', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: 'var(--text3)', fontSize: 10 }} axisLine={false} tickLine={false} width={48}
-                    tickFormatter={v => `₹${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`} />
+                    tickFormatter={v => `₹${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}`} />
                   <Tooltip content={<ChartTip />} />
                   <Legend wrapperStyle={{ fontSize: 12, color: 'var(--text2)' }} />
-                  <Area type="monotone" dataKey="income" name="Income" stroke="var(--green)" fill="url(#gIncome)" strokeWidth={2} dot={false} />
-                  <Area type="monotone" dataKey="expense" name="Expense" stroke="var(--red)" fill="url(#gExpense)" strokeWidth={2} dot={false} />
+                  <Area type="monotone" dataKey="income"  name="Income"  stroke="var(--green)" fill="url(#gIncome)"  strokeWidth={2} dot={false} />
+                  <Area type="monotone" dataKey="expense" name="Expense" stroke="var(--red)"   fill="url(#gExpense)" strokeWidth={2} dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

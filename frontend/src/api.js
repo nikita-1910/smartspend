@@ -21,6 +21,13 @@ api.interceptors.response.use(
   }
 );
 
+export const user = {
+  profile:        ()       => api.get('/api/user/profile'),
+  updateProfile:  (data)   => api.put('/api/user/profile', data),
+  changePassword: (data)   => api.put('/api/user/password', data),
+  deleteAccount:  (password) => api.delete('/api/user/account', { data: { password } }),
+};
+
 export const auth = {
   register: (data) => api.post('/api/auth/register', data),
   login: (email, password) => api.post('/api/auth/login', { email, password }),
@@ -44,6 +51,7 @@ export const budgets = {
 export const reports = {
   generate: (monthYear) => api.post('/api/reports/generate', null, { params: { monthYear } }),
   all: () => api.get('/api/reports'),
+  delete: (monthYear) => api.delete(`/api/reports/${monthYear}`),
 };
 
 export const dashboard = {

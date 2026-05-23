@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { transactions as txApi, reports as reportsApi } from '../api';
 import {
-  FileBarChart2, Zap, ChevronDown, ChevronRight, RefreshCw
+  FileBarChart2, Zap, ChevronDown, ChevronRight, RefreshCw, Trash2
 } from 'lucide-react';
 import {
   Page, Btn, Spinner, Empty, useToast,
@@ -18,7 +18,7 @@ function parseCatSummary(raw) {
 }
 
 // ── Single report card ───────────────────────────────────────────────
-function ReportCard({ report, monthTxs, expanded, onToggle }) {
+function ReportCard({ report, monthTxs, expanded, onToggle, onDelete }) {
   // ── KEY FIX: ALL financial figures computed from live tx list ──────
   // The backend report object is only used for healthScore, healthLabel,
   // categorySummary (structural), anomalyCount, topInsight, generatedAt.
@@ -41,9 +41,31 @@ function ReportCard({ report, monthTxs, expanded, onToggle }) {
             {report.healthLabel || 'N/A'}
           </span>
         </div>
-        <div style={{ display: 'flex', gap: 20, alignItems: 'center', fontSize: 13 }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', fontSize: 13 }}>
           <span style={{ color: 'var(--green)', fontWeight: 600 }}>+₹{fmtMoney(income)}</span>
-          <span style={{ color: 'var(--red)',   fontWeight: 600 }}>−₹{fmtMoney(expense)}</span>
+          <span style={{ color: 'var(--red)', fontWeight: 600 }}>−₹{fmtMoney(expense)}</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(report.monthYear);
+            }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--red)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '6px',
+              borderRadius: '6px',
+              transition: 'background 0.2s',
+            }}
+            className="delete-report-btn"
+            title="Delete Report"
+          >
+            <Trash2 size={15} />
+          </button>
         </div>
       </div>
 
@@ -51,12 +73,12 @@ function ReportCard({ report, monthTxs, expanded, onToggle }) {
         <div className="month-group-body" style={{ padding: 20 }}>
           {/* Top metrics row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
-            <MetricTile label="Income"       value={`₹${fmtMoney(income)}`}  color="var(--green)" />
-            <MetricTile label="Expenses"     value={`₹${fmtMoney(expense)}`} color="var(--red)" />
-            <MetricTile label="Net Savings"  value={`₹${fmtMoney(savings)}`} color={savings >= 0 ? 'var(--accent)' : 'var(--red)'} />
+            <MetricTile label="Income" value={`₹${fmtMoney(income)}`} color="var(--green)" />
+            <MetricTile label="Expenses" value={`₹${fmtMoney(expense)}`} color="var(--red)" />
+            <MetricTile label="Net Savings" value={`₹${fmtMoney(savings)}`} color={savings >= 0 ? 'var(--accent)' : 'var(--red)'} />
             <MetricTile label="Savings Rate" value={`${savingsRate.toFixed(1)}%`} color={savingsRate >= 20 ? 'var(--green)' : savingsRate >= 0 ? 'var(--amber)' : 'var(--red)'} />
             <MetricTile label="Health Score" value={`${score}/100`} color={scoreColor} />
-            <MetricTile label="Anomalies"    value={report.anomalyCount ?? monthTxs.filter(t => t.isAnomaly).length} color="var(--amber)" />
+            <MetricTile label="Anomalies" value={report.anomalyCount ?? monthTxs.filter(t => t.isAnomaly).length} color="var(--amber)" />
           </div>
 
           {/* Insight */}
@@ -75,7 +97,7 @@ function ReportCard({ report, monthTxs, expanded, onToggle }) {
                 const cat = item.category || item.name || '';
                 const spent = Number(item.spent || item.spentAmount || 0);
                 const limit = Number(item.limit || item.limitAmount || 0);
-                const pct   = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0;
+                const pct = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0;
                 const color = CAT_COLORS[cat] || 'var(--accent)';
                 return (
                   <div key={i} style={{ marginBottom: 12 }}>
@@ -125,6 +147,8 @@ export default function Reports() {
   const [expanded, setExpanded] = useState(null);
   const [genMonth, setGenMonth] = useState(monthStr());
   const [generating, setGenerating] = useState(false);
+  const [generatedMonth, setGeneratedMonth] = useState(null);
+  const [deletingMonth, setDeletingMonth] = useState(null);
   const { show, ToastEl } = useToast();
 
   // ── Fetch all reports then fetch live transactions for each month ──
@@ -156,9 +180,6 @@ export default function Reports() {
       }));
 
       setMonthTxMap(txMap);
-
-      // Auto-expand the most recent
-      if (arr.length > 0 && !expanded) setExpanded(arr[0].monthYear);
     } catch {
       show('Failed to load reports', 'error');
     } finally {
@@ -174,6 +195,7 @@ export default function Reports() {
       await reportsApi.generate(genMonth);
       show(`Report for ${genMonth} generated!`);
       await load();
+      setGeneratedMonth(genMonth);
       setExpanded(genMonth);
     } catch (err) {
       const msg = err.response?.data?.message
@@ -185,14 +207,42 @@ export default function Reports() {
     }
   }
 
-  const sorted = [...reports].sort((a, b) => b.monthYear.localeCompare(a.monthYear));
+  async function handleDelete(monthYear) {
+    try {
+      await reportsApi.delete(monthYear);
+      show(`Report for ${monthYear} deleted successfully!`);
+      setReports(prev => prev.filter(r => r.monthYear !== monthYear));
+      setMonthTxMap(prev => {
+        const copy = { ...prev };
+        delete copy[monthYear];
+        return copy;
+      });
+      if (expanded === monthYear) {
+        setExpanded(null);
+      }
+      if (generatedMonth === monthYear) {
+        setGeneratedMonth(null);
+      }
+    } catch (err) {
+      show('Failed to delete report', 'error');
+    }
+  }
+
+  // Sort: recently generated month always first, rest by date descending
+  const sorted = [...reports].sort((a, b) => {
+    if (generatedMonth) {
+      if (a.monthYear === generatedMonth) return -1;
+      if (b.monthYear === generatedMonth) return 1;
+    }
+    return b.monthYear.localeCompare(a.monthYear);
+  });
 
   return (
     <Page title="Reports" subtitle="Monthly financial summaries">
       {ToastEl}
 
       {/* Generate panel */}
-      <div className="card card-sm fade-up" style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 14 }}>
+      <div className="card card-sm fade-up responsive-filter-bar" style={{ marginBottom: 14 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 14, fontFamily: 'var(--font-head)' }}>Generate Budget Report</div>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
@@ -221,8 +271,43 @@ export default function Reports() {
               monthTxs={monthTxMap[r.monthYear] || []}
               expanded={expanded === r.monthYear}
               onToggle={() => setExpanded(prev => prev === r.monthYear ? null : r.monthYear)}
+              onDelete={setDeletingMonth}
             />
           ))}
+        </div>
+      )}
+
+      {/* Beautiful Custom Delete Confirmation Modal */}
+      {deletingMonth && (
+        <div
+          onClick={() => setDeletingMonth(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 16,
+            backdropFilter: 'blur(4px)',
+            animation: 'fadeIn 0.15s ease',
+          }}
+        >
+          <div className="modal-box" style={{ maxWidth: 340 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">Delete Report?</div>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 20, lineHeight: 1.5 }}>
+                Are you sure you want to delete the budget report for <strong>{deletingMonth}</strong>? This action cannot be undone.
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <Btn variant="ghost" onClick={() => setDeletingMonth(null)} style={{ flex: 1 }}>Cancel</Btn>
+                <Btn variant="danger" onClick={() => { handleDelete(deletingMonth); setDeletingMonth(null); }} style={{ flex: 1 }}>Delete</Btn>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </Page>

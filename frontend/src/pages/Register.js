@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../api';
+import { useAuth } from '../AuthContext';
 import { Zap } from 'lucide-react';
 
 export default function Register() {
   const nav = useNavigate();
+  const { login } = useAuth();
   const [form, setForm] = useState({ username: '', email: '', password: '', monthlyIncomeTarget: '' });
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,7 +23,10 @@ export default function Register() {
         password: form.password,
         monthlyIncomeTarget: parseFloat(form.monthlyIncomeTarget) || 0,
       });
-      nav('/login');
+      // Auto-login after registration → redirect to dashboard
+      const { data } = await auth.login(form.email, form.password);
+      login(data.token, { username: data.username, email: data.email });
+      nav('/');
     } catch (ex) {
       setErr(ex.response?.data?.message || ex.response?.data || 'Registration failed.');
     } finally {

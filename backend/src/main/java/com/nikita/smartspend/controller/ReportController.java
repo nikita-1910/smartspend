@@ -37,17 +37,38 @@ public class ReportController {
      */
     @PostMapping("/generate")
     @org.springframework.transaction.annotation.Transactional
-    public ResponseEntity<MonthlyReportResponse> generate(
+    public ResponseEntity<?> generate(
             @RequestParam(defaultValue = "") String monthYear) {
         User user = getCurrentUser();
         if (monthYear.isBlank()) {
             monthYear = YearMonth.now()
                     .format(DateTimeFormatter.ofPattern("yyyy-MM"));
         }
+        YearMonth ym = YearMonth.parse(monthYear, MONTH_FMT);
+        LocalDate from = ym.atDay(1);
+        LocalDate to   = ym.atEndOfMonth();
+
+        // Check if there are any transactions for this month
+        if (txRepo.findByUserIdAndTransactionDateBetween(user.getId(), from, to).isEmpty()) {
+            return ResponseEntity.badRequest().body("No transactions found for this month");
+        }
+
         // Delete stale cached report so regeneration picks up latest transactions
         reportRepo.deleteByUserIdAndMonthYear(user.getId(), monthYear);
         MonthlyReport report = healthEngine.generateReportForUser(user, monthYear);
         return ResponseEntity.ok(mapToResponse(report, user.getId()));
+    }
+
+    /** DELETE /api/reports/{monthYear} — delete a specific month's report */
+    @DeleteMapping("/{monthYear}")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<?> delete(@PathVariable String monthYear) {
+        User user = getCurrentUser();
+        if (reportRepo.existsByUserIdAndMonthYear(user.getId(), monthYear)) {
+            reportRepo.deleteByUserIdAndMonthYear(user.getId(), monthYear);
+            return ResponseEntity.ok().body("Report deleted successfully");
+        }
+        return ResponseEntity.notFound().build();
     }
 
     /** GET /api/reports — all reports for the current user */

@@ -134,8 +134,8 @@ export default function Budgets() {
       </Modal>
 
       {/* Month picker + summary */}
-      <div className="card card-sm fade-up" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div className="card card-sm fade-up responsive-filter-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
+        <div className="month-picker-wrap" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <label style={{ marginBottom: 0 }}>Month</label>
           <input type="month" value={month} onChange={e => setMonth(e.target.value)} style={{ width: 'auto' }} />
         </div>

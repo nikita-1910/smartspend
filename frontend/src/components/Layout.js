@@ -2,7 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import {
   LayoutDashboard, ArrowLeftRight, PiggyBank,
-  FileBarChart2, AlertTriangle, LogOut, Zap
+  FileBarChart2, AlertTriangle, LogOut, Zap, UserCircle
 } from 'lucide-react';
 
 const NAV = [
@@ -11,6 +11,7 @@ const NAV = [
   { to: '/budgets',      label: 'Budgets',      Icon: PiggyBank },
   { to: '/reports',      label: 'Reports',      Icon: FileBarChart2 },
   { to: '/anomalies',    label: 'Anomalies',    Icon: AlertTriangle },
+  { to: '/profile',      label: 'Profile',      Icon: UserCircle },
 ];
 
 export default function Layout() {
@@ -23,7 +24,7 @@ export default function Layout() {
         <div className="sidebar-logo">
           <div className="sidebar-logo-mark">
             <Zap size={18} fill="var(--accent)" color="var(--accent)" />
-            Smart<span>Spend</span>
+            Smart<span style={{ color: 'var(--accent)' }}>Spend</span>
           </div>
           <div className="sidebar-logo-sub">Finance Tracker</div>
         </div>
